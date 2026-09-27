@@ -1,6 +1,61 @@
 # MCP Math Assistant
 
-A small math MCP server with a FastAPI/Gemini app, an interactive Gemini command-line client, and a direct MCP smoke-test client.
+```text
+													 USER
+														 |
+														 v
+							+-----------------------------+
+							|           MCP HOST          |
+							|                             |
+							|  Python app (FastAPI)       |
+							|  Domain router              |
+							|  - identifies request area  |
+							|  - selects that domain      |
+							|                             |
+							|  Gemini LLM                 |
+							|  - receives selected tools  |
+							|                             |
+							|  MCP CLIENT                 |
+							|  - discovers tools          |
+							|  - invokes selected tool    |
+							+-----------------------------+
+														 |
+														 | MCP protocol
+														 | Streamable HTTP
+														 | localhost:8000/mcp
+														 v
+							+-----------------------------+
+							|       ONE MCP SERVER        |
+							|                             |
+							|  +-----------------------+  |
+							|  | MATH (current)        |  |
+							|  | add()                 |  |
+							|  | subtract()            |  |
+							|  | multiply()            |  |
+							|  | divide()              |  |
+							|  | power()               |  |
+							|  +-----------------------+  |
+							|                             |
+							|  +-----------------------+  |
+							|  | FILES (future domain) |  |
+							|  | search() · read()     |  |
+							|  | write()               |  |
+							|  +-----------------------+  |
+							|                             |
+							|  +-----------------------+  |
+							|  | DATABASE (future)     |  |
+							|  | query() · get_record()|  |
+							|  | update_record()       |  |
+							|  +-----------------------+  |
+							+-----------------------------+
+														 |
+														 | Tool result returns to MCP client,
+														 | then Gemini creates the response
+														 v
+													 USER
+```
+
+The Math group is implemented in this project. Files and Database are examples of future groups, not existing tools or a configured database. MCP discovery returns a flat tool list; the host can organize that list by naming convention or metadata, route each request to a domain, and give Gemini only that domain's tool definitions. All selected tools are still invoked through the same MCP client and server.
 
 ## Requirements
 

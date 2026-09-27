@@ -42,7 +42,7 @@ async def main():
             print("Connected. Available tools:", [t.name for t in mcp_tools])
 
             chat = gemini_client.chats.create(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash-lite",
                 config=types.GenerateContentConfig(tools=[gemini_tool]),
             )
 

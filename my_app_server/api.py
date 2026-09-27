@@ -1,3 +1,4 @@
+import json
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -18,7 +19,11 @@ def mcp_tool_to_gemini_declaration(tool) -> types.FunctionDeclaration:
     return types.FunctionDeclaration(
         name=tool.name,
         description=tool.description or "",
-        parameters=tool.input_schema,
+        # `parameters` only accepts Gemini's own (flat) Schema type; MCP
+        # tools with nested Pydantic models (e.g. calculate_all_ratios)
+        # produce standard JSON Schema with $ref/$defs, which needs the
+        # separate `parameters_json_schema` field instead.
+        parameters_json_schema=tool.input_schema,
     )
 
 
@@ -60,13 +65,14 @@ async def query(req: QueryRequest):
     gemini_tool = app.state.gemini_tool
 
     chat = gemini_client.chats.create(
-        model="gemini-2.5-flash",
+        model="gemini-3.5-flash-lite",
         config=types.GenerateContentConfig(tools=[gemini_tool]),
     )
 
     response = chat.send_message(req.message)
 
     tool_calls_made = []
+    ratios_report = None
 
     while response.function_calls:
         function_response_parts = []
@@ -74,6 +80,11 @@ async def query(req: QueryRequest):
             args = dict(fc.args)
             result_text = await call_mcp_tool(session, fc.name, args)
             tool_calls_made.append({"tool": fc.name, "args": args, "result": result_text})
+            if fc.name == "calculate_all_ratios":
+                try:
+                    ratios_report = json.loads(result_text)
+                except json.JSONDecodeError:
+                    ratios_report = result_text
             function_response_parts.append(
                 types.Part.from_function_response(
                     name=fc.name,
@@ -81,6 +92,12 @@ async def query(req: QueryRequest):
                 )
             )
         response = chat.send_message(function_response_parts)
+
+    # calculate_all_ratios already returns a clean, structured report
+    # (ratio name -> value, per period/domain, plus "unavailable"); skip
+    # Gemini's prose summary and hand that report back directly.
+    if ratios_report is not None:
+        return {"ratios": ratios_report}
 
     return {
         "answer": response.text,

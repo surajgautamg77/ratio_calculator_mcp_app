@@ -1,10 +1,13 @@
 import asyncio
 import os
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
+
+load_dotenv()
 
 MCP_SERVER_URL = "http://localhost:8000/mcp"
 
@@ -39,7 +42,7 @@ async def main():
             print("Connected. Available tools:", [t.name for t in mcp_tools])
 
             chat = gemini_client.chats.create(
-                model="gemini-3.5-flash",
+                model="gemini-2.5-flash",
                 config=types.GenerateContentConfig(tools=[gemini_tool]),
             )
 
